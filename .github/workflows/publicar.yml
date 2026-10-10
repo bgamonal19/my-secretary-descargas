@@ -1,0 +1,31 @@
+# Une las partes del instalador de Mac y publica la versión descargable
+# (Releases) con el .dmg y el .apk. Se ejecuta al subir partes nuevas.
+name: Publicar instaladores
+on:
+  push:
+    branches: [main]
+    paths: ["partes/**"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unir el instalador de Mac y comprobarlo
+        run: |
+          mkdir -p dist
+          cat partes/MY-SECRETARY-Mac.dmg.part* > dist/MY-SECRETARY-Mac.dmg
+          echo "$(cat partes/MY-SECRETARY-Mac.dmg.sha256)  dist/MY-SECRETARY-Mac.dmg" | sha256sum -c -
+          cp partes/MY-SECRETARY.apk dist/MY-SECRETARY.apk
+      - name: Publicar (sustituye la versión anterior)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete instaladores --yes --cleanup-tag || true
+          gh release create instaladores dist/MY-SECRETARY-Mac.dmg dist/MY-SECRETARY.apk \
+            --title "MY SECRETARY — instaladores" \
+            --notes "**Mac:** MY-SECRETARY-Mac.dmg (Apple Silicon e Intel).
+          **Android:** MY-SECRETARY.apk (después se actualiza sola desde la app).
+          **iPhone:** abre https://one-assistant.vercel.app en Safari → Compartir → «Añadir a pantalla de inicio»."
